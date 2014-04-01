@@ -52,7 +52,7 @@ function Server:new()
           -- executes in build path 
           run = function(self, cmd)
             if type(cmd ) == 'table' then
-              cmd = table.concat(cmd)
+              cmd = table.concat(cmd, '\n')
             end
             print('execute ' .. 'cd ' .. self.path .. ' && ' .. cmd) 
           end,
