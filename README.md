@@ -46,7 +46,7 @@ All these will be callable through `bin/unrboken` which would support commands l
 
   List projects and last build statuses.
 
-This is similar to the `cerberus` CI server and think are simple and might be expandable.
+These commands are similar to the `cerberus` CI server and think are simple and might be expandable.
 
 Cerberus also supports more commands: `add URL ...` and `remove PROJECT` (TODO: Check if its remove or delete or whatever)
 
