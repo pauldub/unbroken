@@ -10,11 +10,11 @@ local DNode = Unbroken:new({
   }
 })
 
-function DNode:test(project, done)
+function DNode:onBuild(build, done)
   -- project:copyFile('database.yml', 'config/datbase.yml')
-  project:cmd('lui')
-  project:cmd('modules/bourbon/bin/bourbon -p test')
-  project:cmd('modules/bourbon/bin/bourbon -p test/server')
+  build:run('lui')
+  build:run('modules/bourbon/bin/bourbon -p test')
+  build:run('modules/bourbon/bin/bourbon -p test/server')
 
   done(false, "build passed")
 end
