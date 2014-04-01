@@ -4,6 +4,7 @@ local Emitter = require('core').Emitter
 local table = require('table')
 local utils = require('utils')
 
+local async = require('async')
 local dnode = require('dnode')
 
 -- escape commands before running them
@@ -35,13 +36,11 @@ function Server:new()
       -- we can get informations about the project
       -- from the client.
       build = function(reply)
-
-        local build_path = 'test/unb'
+        local build_path = 'test/unb' -- build path, mktemp probably
         local repo = GitRepo:new(client.url)
       
 	      -- the clone / checkout part could be refactored
         repo:clone(build_path)
-      print(utils.dump(client))
 
         -- ???
         if revision then
@@ -73,21 +72,43 @@ function Server:new()
           -- we could 
         }
 
-        -- create the call back function
-        -- so it updates the client instance?
-        client.done = function(self, err, res)
-          client = self 
-          reply(err, res)
-        end
-
 	      -- pass the builder we just setup to the client
 	      -- so he can run commands etc.
 	      -- and simply return 	
         -- more callback maybe implemented
         -- (probably the same as for travis-ci)
-        client:beforeInstall(builder, function(err, res)
-          -- reply(err, res)
-        end)
+        local steps = { 
+          'beforeInstall',
+          'install',
+          'beforeScript',
+          'script'
+        }
+
+        async.forEachSeries(steps, function(current_step, next_step)
+          -- create the call back function
+          -- so it updates the client instance?
+          --
+          -- it is a weird use of callbacks, but dnode
+          -- makes it possible and I find it funny to
+          -- call object methods.
+          client.done = function(self, err, res)
+            client = self 
+            -- print newline right after running ;)
+            print()
+            -- and then call the iterator with any error
+            next_step(err)
+          end
+
+          print('[' .. client.name .. '] ' .. current_step)
+
+          local step = client[current_step]
+          -- we could also inform client of the failed step?
+          -- does he or we handle errors? I think we should,
+          -- but maybe client could be notified in some way?
+          -- like attach a callback? as with "done"?
+          step(client, builder)
+        end, reply)
+  
       end,
     }
   end)
@@ -127,7 +148,6 @@ function Unbroken:build(revision, connect)
     if (err) then  
       error(err) 
     end
-    -- build path, mktemp probably
   end)
 end
 

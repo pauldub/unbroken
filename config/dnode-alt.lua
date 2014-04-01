@@ -10,6 +10,7 @@ local config = {
 	url = 'https://github.com/pauldub/luvit-dnode',
 	scm = 'git',
 
+  -- both aren't used yet.
   language = 'luvit',
   branches = {'master'},
 
@@ -29,7 +30,7 @@ local config = {
   -- before install callback, runs in build context
   -- before anything else
   -- code is already checked out.
-  beforeInstall = function(self, remote, done)
+  beforeInstall = function(self, remote)
     remote:run('apt-get install -y luajit')
     remote:run('apt-get install -y luarocks')
 
@@ -37,7 +38,7 @@ local config = {
   end,
   
   -- Install required packages.
-  install = function(self, remote, done)
+  install = function(self, remote)
     remote:run({
       'mkdir bin/',
       'curl http://luvit.io/dist/latest/ubuntu-latest/x86_64/luvit-bundled -o bin/luvit',
@@ -49,7 +50,7 @@ local config = {
     self:done() 
   end,
 
-  beforeScript = function(self, remote, done)
+  beforeScript = function(self, remote)
     -- Maybe in that scenario we want to
     -- write remote file content directly? 
     -- So we can use variables setup earlier (test db crendentials, etc.)
@@ -69,12 +70,27 @@ local config = {
     self:done()
   end,
 
+  -- this will be implemented by bin/unbroken probably
+  -- maybe not the connect callback, should it be 
+  -- configurable per project, globally or both 
+  -- should it be  overridable?
+  -- we can call it with like:
+  --
+  -- local project = Unbroken:new(config)
+  -- project.instance.testBuild(project)
+  -- 
+  -- This because instance is the actual
+  -- the client to the server.
   testBuild = function(self)
+    -- Simple local runner ;)
     local server = Server:new()
 
-    self:build('master', function(client, cb)
+    self:build('master', function(client, done)
       client:pipe(server)
       server:pipe(client)
+      -- not sure this is usefull as 
+      -- we bind the 'remote' event
+      done()
     end)
   end
 }
