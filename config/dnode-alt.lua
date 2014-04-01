@@ -77,10 +77,13 @@ local config = {
   -- we can call it with like:
   --
   -- local project = Unbroken:new(config)
+  -- or 
+  -- local project = require('config/dnode-alt.lua')
   -- project.instance.testBuild(project)
   -- 
   -- This because instance is the actual
-  -- the client to the server.
+  -- the client to the server and it is
+  -- just my repl helper.
   testBuild = function(self)
     -- Simple local runner ;)
     local server = Server:new()
