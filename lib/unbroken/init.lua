@@ -1,6 +1,7 @@
 local Object = require('core').Object
 local Emitter = require('core').Emitter
 
+local table = require('table')
 local utils = require('utils')
 
 local dnode = require('dnode')
@@ -34,10 +35,13 @@ function Server:new()
       -- we can get informations about the project
       -- from the client.
       build = function(reply)
+
         local build_path = 'test/unb'
         local repo = GitRepo:new(client.url)
       
+	      -- the clone / checkout part could be refactored
         repo:clone(build_path)
+      print(utils.dump(client))
 
         -- ???
         if revision then
@@ -46,11 +50,16 @@ function Server:new()
         
         local builder = {
           path = build_path,
-          -- executes in build path
+          -- executes in build path 
           run = function(self, cmd)
+            if type(cmd ) == 'table' then
+              cmd = table.concat(cmd)
+            end
             print('execute ' .. 'cd ' .. self.path .. ' && ' .. cmd) 
           end,
           
+          -- helper to copy a file from client to server build path  
+          -- server grabs file content from the client.
           copyFile = function(self, client_path, path)
             client:readFile(client_path, function(err, content)
               if err then
@@ -59,45 +68,56 @@ function Server:new()
               print('ok writing ' .. content .. ' to ' .. self.path .. '/' .. path)
             end)
           end
+          -- these two could easily be implemented, to run
+          -- in docker containers for example ;)
+          -- we could 
         }
 
-        client:onBuild(builder, function(err, res)
+        -- create the call back function
+        -- so it updates the client instance?
+        client.done = function(self, err, res)
+          client = self 
           reply(err, res)
+        end
+
+	      -- pass the builder we just setup to the client
+	      -- so he can run commands etc.
+	      -- and simply return 	
+        -- more callback maybe implemented
+        -- (probably the same as for travis-ci)
+        client:beforeInstall(builder, function(err, res)
+          -- reply(err, res)
         end)
       end,
     }
   end)
+
   return self
 end
 
-
-
+-- Not ure about the name.
 local Unbroken = Emitter:extend() 
 function Unbroken:initialize(options)
-  self.options = options
-  self.url = options.url or error('options.url is missing')
-  self.name = options.name or ''
-  self.repo = GitRepo:new(options.url) -- well, first we'll use git
-  self.publishers = options.publishers or {}
+  self.instance = options
 end
 
 function Unbroken:build(revision, connect)
-  local self_copy = self
+  local instance = self.instance
   -- Create callback so server can read files from config dir
   -- a bit ugly, I like better the fact that functions in config/dnode.lua
   -- are accessible ! :)
-  self_copy.readFile = function(self, path, reply)
+  instance.readFile = function(self, path, reply)
     reply(false, 'foo content')
   end
 
-  local client = dnode:new(self)
+  local client = dnode:new(instance)
 
   client:on('remote', function(remote)
     remote.build(function(err, result)
       -- call publishers  with the project and the result of the build
-      for publisher, handler in pairs(self.publishers) do
+      for publisher, handler in pairs(instance.publishers) do
         if type(handler) == 'function' then
-          handler(self, err or result)
+          handler(instance, err or result)
         end
       end
     end) 
@@ -116,7 +136,9 @@ return {
   GitRepo = GitRepo,
   Server = Server,
   publishers = { echo = function(project, result)
-      print('[' .. project.name .. '] ' .. result)
+      if result then
+        print('[' .. project.name .. '] ' .. result)
+      end
     end
   }
 }

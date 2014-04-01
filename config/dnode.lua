@@ -16,7 +16,7 @@ function DNode:onBuild(build, done)
   build:run('modules/bourbon/bin/bourbon -p test')
   build:run('modules/bourbon/bin/bourbon -p test/server')
 
-  done(false, "build passed")
+  self:done(false, "build passed")
 end
 
 local utils = require('utils')
